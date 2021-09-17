@@ -11,6 +11,7 @@
 - Classes for each section (e.g results, standings, finishing status etc.)
 - Map drivers names to codes in dict
 - Tests
+- Expand validate function
 - Make bot
 
 ### Done ✓
