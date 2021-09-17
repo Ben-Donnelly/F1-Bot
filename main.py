@@ -12,6 +12,9 @@ class APICalls:
 		self.base_url = "http://ergast.com/api/f1"
 		self.extra_information = ""
 
+	def validate_parameters(self):
+		if self.race_number == 'last':
+			self.extra_information = f"You did not specifY a race number so I got the information for the last race\n"
 	# Drivers
 	def drivers_for_year(self):
 		self.def_return_value = get(f"{self.base_url}/{self.year}/drivers")
@@ -28,6 +31,7 @@ class APICalls:
 			self.def_return_value = get(f"{self.base_url}/{self.year}/{self.race_number}/constructors")
 		else:
 			self.def_return_value = get(f"{self.base_url}/{self.year}/constructors")
+		self.validate_parameters()
 		return self.to_string()
 
 	# Circuts
@@ -37,6 +41,8 @@ class APICalls:
 			self.def_return_value = get(f"{self.base_url}/{self.year}/{self.race_number}/circuits")
 		else:
 			self.def_return_value = get(f"{self.base_url}/{self.year}/circuits")
+		self.validate_parameters()
+
 		# TODO: Special characters (e.g. ü) print in unicode, fix
 		return self.to_string()
 
@@ -45,8 +51,7 @@ class APICalls:
 		# This is cool
 		# Most recent race result: replace year and race_number with current and last
 		self.def_return_value = get(f"{self.base_url}/{self.year}/{self.race_number}/results")
-		if self.race_number == 'last':
-			self.extra_information = "You did not specifY a race number so I got the information for the last race\n"
+		self.validate_parameters()
 		return self.to_string()
 
 	# Seasons
@@ -64,6 +69,7 @@ class APICalls:
 	# Qualifying
 	def qualifying_results(self):
 		self.def_return_value = get(f"{self.base_url}/{self.year}/{self.race_number}/qualifying")
+		self.validate_parameters()
 		return self.to_string()
 
 	# Standings
@@ -73,6 +79,7 @@ class APICalls:
 			self.def_return_value = get(f"{self.base_url}/{self.year}/driverStandings")
 		else:
 			self.def_return_value = get(f"{self.base_url}/{self.year}/{self.race_number}/driverStandings")
+		self.validate_parameters()
 		return self.to_string()
 
 	def constructor_standings_after_a_race(self):
@@ -81,6 +88,7 @@ class APICalls:
 		# This has date and time
 		else:
 			self.def_return_value = get(f"{self.base_url}/{self.year}/{self.race_number}/constructorStandings")
+		self.validate_parameters()
 		return self.to_string()
 
 	def current_drivers_standings(self):
@@ -125,6 +133,7 @@ class APICalls:
 
 	def list_of_finishing_status_for_a_specific_race_number_in_a_season(self):
 		self.def_return_value = get(f"{self.base_url}/{self.year}/{self.race_number}/status")
+		self.validate_parameters()
 		return self.to_string()
 
 	# Lap times
@@ -136,15 +145,18 @@ class APICalls:
 			get_url += f"/{lapnumber}"
 
 		self.def_return_value = get(get_url)
+		self.validate_parameters()
 		return self.to_string()
 
 	# Pit stops
 	def pit_stop_data_for_a_race(self):
 		self.def_return_value = get(f"{self.base_url}/{self.year}/{self.race_number}/pitstops")
+		self.validate_parameters()
 		return self.to_string()
 
 	def specific_pit_stop_data_for_a_race(self, pitstop_number):
 		self.def_return_value = get(f"{self.base_url}/{self.year}/{self.race_number}/pitstops/{pitstop_number}")
+		self.validate_parameters()
 		return self.to_string()
 
 	def to_string(self):
@@ -153,9 +165,9 @@ class APICalls:
 
 	@staticmethod
 	def main():
-		api_call = APICalls()
+		api_call = APICalls(race_number=4)
 		# Next: All winners of drivers' championships
-		print(api_call.results())
+		print(api_call.specific_pit_stop_data_for_a_race(1))
 
 
 if __name__ == "__main__":
