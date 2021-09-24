@@ -1,12 +1,15 @@
 from requests import get
-from lxml import etree
+import xml.etree.ElementTree as ET
+from re import match, I
+from bs4 import BeautifulSoup
 from datetime import datetime
 
 class Call:
 	current_year = datetime.today().year
 
-	def __init__(self, year=current_year, race_number="last", driver_id=None, constructor_id=None, lapnumber=None, pitstop_number=None):
+	def __init__(self, year=current_year, race_number="last", driver=None, driver_id=None, constructor_id=None, lapnumber=None, pitstop_number=None):
 		self.year = year
+		self.driver = driver
 		self.race_number = race_number
 		self.base_url = "http://ergast.com/api/f1"
 		self.extra_information = ""
@@ -14,6 +17,8 @@ class Call:
 		self.constructor_id = constructor_id
 		self.lapnumber = lapnumber
 		self.pitstop_number = pitstop_number
+		self.parser = None
+		self.return_values = {}
 
 	def validate_parameters(self):
 		if self.race_number == 'last':
@@ -24,15 +29,59 @@ class Call:
 		exit()
 
 	# Drivers
-	def drivers_for_year(self):
+	def drivers_for_year(self, justDriversList=False):
 		self.def_return_value = get(f"{self.base_url}/{self.year}/drivers")
-		return self
+		self.parser = BeautifulSoup(self.def_return_value.text, "xml")
+
+		driver_first_name = self.parser.find_all("GivenName")
+		driver_last_name = self.parser.find_all('FamilyName')
+		driver_full_name = [f"{fn.text} {ln.text}" for fn, ln in zip(driver_first_name, driver_last_name)]
+
+		if justDriversList:
+			driver_list = self.parser.find_all("Driver")
+			return driver_full_name, driver_list
+
+		has_data = self.def_return_value.raw._fp_bytes_read
+		self.return_values = {"has_data": has_data, "status_code": self.def_return_value.status_code,
+							  "drivers": driver_full_name}
+
+		# There are few ways of telling if there will be actual data here
+		# If there is, _fp_bytes_read will be considerably higher than 500
+		try:
+			self.year = int(self.year)
+		except(ValueError):
+			print(f"{self.year} is not a valid year")
+			raise ValueError
+
+		correct_verb = "were" if self.year < datetime.today().year else "are"
+		if has_data > 500:
+			print(f"Drivers racing for the {self.year} season {correct_verb}:\n")
+			print(*driver_full_name, sep='\n')
+			return self.return_values
+
+		print(f"I do not have the data for the {self.year} season yet, sorry 😪")
+		return self.return_values
 
 	def driver_information(self):
+		get_ids = self.map_names_to_id()
+
+		if self.driver:
+			self.driver = self.driver.title()
+			for entry in get_ids.keys():
+				if match(f".*{self.driver}.*", entry, flags=I):
+					self.driver_id = get_ids[entry]
+
 		if not self.driver_id:
-			raise Exception('You did not specify a driver id')
+			raise Exception('You need to specify a driver or driver id\n you can give me a full name, last name or id')
+
 		self.def_return_value = get(f"{self.base_url}/drivers/{self.driver_id}")
-		return self
+		# Todo: if name, e.g misspelled, not a driver etc. print that here (check length like in has_data above
+		# Todo: tests
+		print(self.def_return_value.text)
+		has_data = self.def_return_value.raw._fp_bytes_read
+		self.return_values = {"has_data": has_data, "status_code": self.def_return_value.status_code,
+							  "has_id": self.driver_id != None}
+		return self.return_values
 
 	# Constructors
 	def constructors_for_year(self):
@@ -183,19 +232,46 @@ class Call:
 		self.validate_parameters()
 		return self
 
+	def map_names_to_id(self):
+		drivers_for_year_call = self.drivers_for_year(justDriversList=True)
+		driver_names = drivers_for_year_call[0]
+		parse_driver_ids = drivers_for_year_call[1]
+		driver_id_dict = {}
+
+		for index, value in enumerate(parse_driver_ids):
+			driver_id_dict[driver_names[index]] = value.attrs['driverId']
+
+		return driver_id_dict
+
+
 	@staticmethod
 	def to_string(data):
-		to_string_return_value = etree.fromstring(data.def_return_value.content)
-		return f"{data.extra_information}{etree.tostring(to_string_return_value, pretty_print=True).decode()}"
+		return data
+		# to_string_return_value = ET.fromstring(data.def_return_value.content)
+		# return f"{data.extra_information}{ET.tostring(to_string_return_value, pretty_print=True).decode()}"
 
 	@staticmethod
 	def main():
 		# noinspection PyTypeChecker
-		api_call = Call(race_number=4)
+		api_call = Call(driver="verstappen", year=2009)
 
-		api_call_result = api_call.driver_standings_by_specifying_the_driver()
+		# api_call_result = api_call.drivers_for_year()
+		# bs = etree.XML(api_call_result.def_return_value.content)
+		# etree.indent(bs)
+		# print(etree.tostring(bs, encoding='unicode'))
 
-		print(api_call.to_string(api_call_result))
+		api_call_result = api_call.drivers_for_year()
+		x = api_call_result
+
+		# print(api_call_result.def_return_value.content)
+		# root = ET.fromstring(api_call_result.def_return_value.text)
+		# print(root.findall("[tag='Driver']"))
+
+		# bs = etree.parse(api_call_result.def_return_value.content)
+		# print(type(bs))
+		# print(bs.getroot())
+
+		# print(api_call.to_string(api_call_result))
 
 
 if __name__ == "__main__":
