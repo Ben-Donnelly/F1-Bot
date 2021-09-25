@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 from re import match, I
 from bs4 import BeautifulSoup
 from datetime import datetime
+import json
 
 class Call:
 	current_year = datetime.today().year
@@ -70,17 +71,54 @@ class Call:
 			for entry in get_ids.keys():
 				if match(f".*{self.driver}.*", entry, flags=I):
 					self.driver_id = get_ids[entry]
+					self.driver_full_name = entry
+					break
 
 		if not self.driver_id:
 			raise Exception('You need to specify a driver or driver id\n you can give me a full name, last name or id')
 
-		self.def_return_value = get(f"{self.base_url}/drivers/{self.driver_id}")
+		# self.def_return_value = get(f"{self.base_url}/drivers/{self.driver_id}")
+		data = get('https://ergast.com/api/f1/2021/driverstandings.json')
+		self.def_return_value = json.loads(data.text)
+		self.def_return_value = self.def_return_value['MRData']['StandingsTable']['StandingsLists'][0]['DriverStandings']
+
+		required_driver_details = {}
+		for i in self.def_return_value:
+			if i['Driver']['driverId'] == self.driver_id:
+				required_driver_details = i
+				break
+		# self.parser = BeautifulSoup(self.def_return_value.text, "xml")
 		# Todo: if name, e.g misspelled, not a driver etc. print that here (check length like in has_data above
 		# Todo: tests
-		print(self.def_return_value.text)
-		has_data = self.def_return_value.raw._fp_bytes_read
-		self.return_values = {"has_data": has_data, "status_code": self.def_return_value.status_code,
-							  "has_id": self.driver_id != None}
+		driver_current_position = required_driver_details['position']
+		driver_current_points = required_driver_details['points']
+		driver_num_of_wins = required_driver_details['wins']
+
+		required_driver_constructor = required_driver_details['Constructors'][0]
+		constructor_nationality = required_driver_constructor['nationality']
+		constructor_name = required_driver_constructor['name']
+
+		required_driver_details = required_driver_details['Driver']
+		driver_first_name = required_driver_details['givenName']
+		driver_last_name = required_driver_details['familyName']
+		driver_number = required_driver_details['permanentNumber']
+		driver_dob = required_driver_details['dateOfBirth']
+		driver_nationality = required_driver_details['nationality']
+
+		# driver_number = self.parser.find("PermanentNumber").text
+		# driver_dob = datetime.fromisoformat(driver_dob)
+		dob_for_age = datetime.fromisoformat(driver_dob).strftime("%B %d %Y")
+		age = datetime.today().year - int(dob_for_age[-4:])
+
+		print(f"{driver_first_name} {driver_last_name} is a {driver_nationality} driver\n"
+			  f"He is {age} years old, born on {dob_for_age}\n"
+			  f"{driver_number} is his driver number\n"
+			  f"He is currently P{driver_current_position} in the championship with {driver_current_points} points"
+			  f" and {driver_num_of_wins} wins this season\n"
+			  f"He races for the {constructor_nationality} team {constructor_name}")
+		# has_data = self.def_return_value.raw._fp_bytes_read
+		# self.return_values = {"has_data": has_data, "status_code": self.def_return_value.status_code,
+		# 					  "has_id": self.driver_id != None}
 		return self.return_values
 
 	# Constructors
@@ -91,7 +129,56 @@ class Call:
 		else:
 			self.def_return_value = get(f"{self.base_url}/{self.year}/constructors")
 		self.validate_parameters()
-		return self
+		print(self.def_return_value.text)
+		"""
+		<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="/schemas/mrd-1.4.xsl"?>
+<MRData xmlns="http://ergast.com/mrd/1.4" series="f1" url="http://ergast.com/api/f1/2021/last/constructors" limit="30" offset="0" total="10">
+	<ConstructorTable season="2021" round="14">
+		<Constructor constructorId="alfa" url="http://en.wikipedia.org/wiki/Alfa_Romeo_in_Formula_One">
+			<Name>Alfa Romeo</Name>
+			<Nationality>Swiss</Nationality>
+		</Constructor>
+		<Constructor constructorId="alphatauri" url="http://en.wikipedia.org/wiki/Scuderia_AlphaTauri">
+			<Name>AlphaTauri</Name>
+			<Nationality>Italian</Nationality>
+		</Constructor>
+		<Constructor constructorId="alpine" url="http://en.wikipedia.org/wiki/Alpine_F1_Team">
+			<Name>Alpine F1 Team</Name>
+			<Nationality>French</Nationality>
+		</Constructor>
+		<Constructor constructorId="aston_martin" url="http://en.wikipedia.org/wiki/Aston_Martin_in_Formula_One">
+			<Name>Aston Martin</Name>
+			<Nationality>British</Nationality>
+		</Constructor>
+		<Constructor constructorId="ferrari" url="http://en.wikipedia.org/wiki/Scuderia_Ferrari">
+			<Name>Ferrari</Name>
+			<Nationality>Italian</Nationality>
+		</Constructor>
+		<Constructor constructorId="haas" url="http://en.wikipedia.org/wiki/Haas_F1_Team">
+			<Name>Haas F1 Team</Name>
+			<Nationality>American</Nationality>
+		</Constructor>
+		<Constructor constructorId="mclaren" url="http://en.wikipedia.org/wiki/McLaren">
+			<Name>McLaren</Name>
+			<Nationality>British</Nationality>
+		</Constructor>
+		<Constructor constructorId="mercedes" url="http://en.wikipedia.org/wiki/Mercedes-Benz_in_Formula_One">
+			<Name>Mercedes</Name>
+			<Nationality>German</Nationality>
+		</Constructor>
+		<Constructor constructorId="red_bull" url="http://en.wikipedia.org/wiki/Red_Bull_Racing">
+			<Name>Red Bull</Name>
+			<Nationality>Austrian</Nationality>
+		</Constructor>
+		<Constructor constructorId="williams" url="http://en.wikipedia.org/wiki/Williams_Grand_Prix_Engineering">
+			<Name>Williams</Name>
+			<Nationality>British</Nationality>
+		</Constructor>
+	</ConstructorTable>
+</MRData>
+
+		"""
 
 	# Circuts
 	def circuts_for_year(self):
@@ -123,6 +210,7 @@ class Call:
 
 	def season_list(self):
 		self.def_return_value = get(f"{self.base_url}/{self.year}")
+
 		return self
 
 	# Qualifying
@@ -140,7 +228,8 @@ class Call:
 		else:
 			self.def_return_value = get(f"{self.base_url}/{self.year}/{self.race_number}/driverStandings")
 		self.validate_parameters()
-		return self
+		print(self.def_return_value.text)
+		return self.def_return_value
 
 	def constructor_standings_after_a_race(self):
 		# TODO: As above
@@ -243,6 +332,10 @@ class Call:
 
 		return driver_id_dict
 
+	# def map_driver_to_team(self):
+	# 	driver_standings_call = self.driver_standings_after_a_race()
+	# 	print(driver_standings_call)
+
 
 	@staticmethod
 	def to_string(data):
@@ -253,14 +346,14 @@ class Call:
 	@staticmethod
 	def main():
 		# noinspection PyTypeChecker
-		api_call = Call(driver="verstappen", year=2009)
+		api_call = Call(driver="yuki tsunoda")
 
 		# api_call_result = api_call.drivers_for_year()
 		# bs = etree.XML(api_call_result.def_return_value.content)
 		# etree.indent(bs)
 		# print(etree.tostring(bs, encoding='unicode'))
 
-		api_call_result = api_call.drivers_for_year()
+		api_call_result = api_call.driver_information()
 		x = api_call_result
 
 		# print(api_call_result.def_return_value.content)
