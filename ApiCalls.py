@@ -152,8 +152,46 @@ class Call:
 		return self
 
 	# result
-	def results(self):
-		# Here Next
+	def results(self, compareDriver1=None, compareDriver2=None, circut=None, compare_flag=False):
+		if compare_flag:
+			if not circut:
+				raise Exception('You need to specify a circut')
+
+			driver_id_dict = self.map_names_to_id()
+
+			d1_flag = False
+			d2_flag = False
+
+			for entry in driver_id_dict.keys():
+				if not d1_flag and match(f".*{compareDriver1}.*", entry, flags=I):
+					compareDriver1_id = driver_id_dict[entry]
+					d1_flag = True
+
+					self.driver_full_name = entry
+
+				if not d2_flag and match(f".*{compareDriver2}.*", entry, flags=I):
+					compareDriver2_id = driver_id_dict[entry]
+					d2_flag = True
+
+					# self.driver_full_name = entry
+
+				if d1_flag and d2_flag:
+					break
+
+			print(f"{self.base_url}/{self.year}/drivers/{compareDriver1}/circuits/{circut}/results.json")
+			driver1_data = get(f"{self.base_url}/{self.year}/drivers/{compareDriver1_id}/circuits/{circut}/results.json")
+			driver2_data = get(f"{self.base_url}/{self.year}/drivers/{compareDriver2_id}/circuits/{circut}/results.json")
+
+			if driver1_data.status_code != 200 or driver2_data.status_code != 200:
+				raise Exception('I could not find any data for the specified drivers and/or race')
+
+			driver1_data = json.loads(driver1_data.text)
+			driver2_data = json.loads(driver2_data.text)
+
+			driver1_data = driver1_data['MRData']['RaceTable']['Races'][0]['Results'][0]
+			driver2_data = driver2_data['MRData']['RaceTable']['Races'][0]['Results'][0]
+			return {compareDriver1: driver1_data, compareDriver2: driver1_data}
+
 		# This is cool
 		# Most recent race result: replace year and race_number with current and last
 		# if not self.race_number:
@@ -1135,6 +1173,41 @@ class Call:
 		# to_string_return_value = ET.fromstring(data.def_return_value.content)
 		# return f"{data.extra_information}{ET.tostring(to_string_return_value, pretty_print=True).decode()}"
 
+	def compare_2_drivers_from_a_race(self, driver1, driver2, circut=None):
+		if not driver1 and driver2:
+			raise Exception('You need to specify 2 drivers to compare')
+
+		if not circut:
+			raise Exception('You need to specify a circut')
+
+		data = self.results(compareDriver1=driver1, compareDriver2=driver2, circut=circut, compare_flag=True)
+		d1, d2 = data.keys()
+
+		# Next: Here
+		# Note: This is broken both times are equal
+		# Dont blame me for the bad code here, I'm tired and I will fix it
+		d1_fastest_lap = data[d1]['FastestLap']['Time']['time']
+		d2_fastest_lap = data[d2]['FastestLap']['Time']['time']
+
+		format = '%M:%S.%f'
+		d_fastest_time = (datetime.strptime(d1_fastest_lap, format) - datetime.strptime(d2_fastest_lap, format)).total_seconds()
+
+		if d_fastest_time > 0:
+			data['driver_with_fastest_lap'] = d1
+			data['driver_with_fastest_lap_time'] = d1_fastest_lap
+			data['driver_with_2nd_fastest_lap'] = d2
+			data['driver_with_2nd_fastest_lap_time'] = d2_fastest_lap
+		else:
+			data['driver_with_fastest_lap'] = d2
+			data['driver_with_fastest_lap_time'] = d2_fastest_lap
+			data['driver_with_2nd_fastest_lap'] = d1
+			data['driver_with_2nd_fastest_lap_time'] = d1_fastest_lap
+
+		fl_string = f"{data['driver_with_fastest_lap']} had the fastest lap with a time of {data['driver_with_fastest_lap_time']}.\n" \
+					f"This was {abs(d_fastest_time)} faster than {data['driver_with_2nd_fastest_lap']} with a time of {data['driver_with_2nd_fastest_lap_time']}\n" \
+					f"(Note: these are just comparisons of these 2 drivers)"
+		print(fl_string)
+
 	@staticmethod
 	def main():
 		# noinspection PyTypeChecker
@@ -1145,7 +1218,7 @@ class Call:
 		# etree.indent(bs)
 		# print(etree.tostring(bs, encoding='unicode'))
 
-		api_call_result = api_call.results()
+		api_call_result = api_call.compare_2_drivers_from_a_race(driver1='Lewis Hamilton', driver2='Max Verstappen', circut='sochi')
 		# print(api_call_result)
 
 		# print(api_call_result.def_return_value.content)
