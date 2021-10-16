@@ -183,9 +183,11 @@ class TestInvalidCalls(unittest.TestCase):
 	# 	self.assertIsNotNone(test_constructors_for_year_result)
 	# 	self.assertTrue(len(test_constructors_for_year_result.content) > 0)
 	#
+  
 	# def test_circuits_for_year(self):
 	# 	test_circuits_for_year_result = ApiCalls.Call().circuits_for_year().def_return_value
 	# 	self.assertEqual(test_circuits_for_year_result.status_code, 200)
+  
 	# 	self.assertIsNotNone(test_circuits_for_year_result)
 	# 	self.assertTrue(len(test_circuits_for_year_result.content) > 0)
 	#
