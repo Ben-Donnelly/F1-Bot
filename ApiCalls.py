@@ -2,11 +2,11 @@ from requests import get
 from lxml import etree
 from datetime import datetime
 
-
 class Call:
 	current_year = datetime.today().year
 
-	def __init__(self, year=current_year, race_number=None, driver=None):
+	def __init__(self, year=current_year, race_number=None):
+
 		self.year = year
 		self.race_number = race_number
 		self.base_url = "http://ergast.com/api/f1"
@@ -21,7 +21,6 @@ class Call:
 		print(self.message)
 		exit()
 
-
 	@staticmethod
 	def to_string(data):
 		return data
@@ -31,20 +30,7 @@ class Call:
 	@staticmethod
 	def main():
 		# noinspection PyTypeChecker
-
-		api_call = Call(driver="Lewis hamilton")
-
-		# api_call_result = api_call.drivers_for_year()
-		# bs = etree.XML(api_call_result.def_return_value.content)
-		# etree.indent(bs)
-		# print(etree.tostring(bs, encoding='unicode'))
-
-		api_call_result = api_call.compare_2_drivers_from_a_race(driver1='Lewis Hamilton', driver2='Max Verstappen', circuit='sochi')
-		# print(api_call_result)
-
-		# print(api_call_result.def_return_value.content)
-		# root = ET.fromstring(api_call_result.def_return_value.text)
-		# print(root.findall("[tag='Driver']"))
+		api_call = Call(race_number=4)
 
 		api_call_result = api_call.driver_standings_by_specifying_the_driver()
 
