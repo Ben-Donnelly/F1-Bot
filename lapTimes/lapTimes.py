@@ -1,5 +1,7 @@
 from requests import get
 from datetime import datetime
+import ApiCalls
+
 
 class LapTimes:
 	current_year = datetime.today().year
@@ -23,5 +25,7 @@ class LapTimes:
 			get_url += f"/{self.lapnumber}"
 
 		self.def_return_value = get(get_url)
-		self.validate_parameters()
+
+		ApiCall = ApiCalls.Call()
+		ApiCall.validate_parameters()
 		return self
