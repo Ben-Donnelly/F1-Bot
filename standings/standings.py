@@ -1,5 +1,6 @@
 from requests import get
 from datetime import datetime
+import ApiCalls
 
 
 class Standings:
@@ -13,6 +14,7 @@ class Standings:
 		self.base_url = "http://ergast.com/api/f1"
 		self.extra_information = ""
 		self.return_values = {}
+		self.api_call = ApiCalls.Call()
 
 	def driver_standings_after_a_race(self):
 		# This has date and time
@@ -21,7 +23,7 @@ class Standings:
 			self.def_return_value = get(f"{self.base_url}/{self.year}/driverStandings")
 		else:
 			self.def_return_value = get(f"{self.base_url}/{self.year}/{self.race_number}/driverStandings")
-		self.validate_parameters()
+		self.api_call.validate_parameters()
 		print(self.def_return_value.text)
 		return self.def_return_value
 
@@ -33,7 +35,7 @@ class Standings:
 		# This has date and time
 		else:
 			self.def_return_value = get(f"{self.base_url}/{self.year}/{self.race_number}/constructorStandings")
-		self.validate_parameters()
+		self.api_call.validate_parameters()
 		return self
 
 
@@ -61,8 +63,7 @@ class Standings:
 
 	def driver_standings_by_specifying_the_driver(self):
 		if not self.driver_id:
-			self.message = "You need to specify a driver id"
-			return self.error_message()
+			return self.api_call.error_message("You need to specify a driver id")
 
 		self.def_return_value = get(f"{self.base_url}/drivers/{self.driver_id}/driverStandings")
 		return self
@@ -71,8 +72,7 @@ class Standings:
 	def constructor_standings_by_specifying_the_constructor(self):
 		# Could limit 1 here to get first year team was in f1
 		if not self.constructor_id:
-			self.message = "You need to specify a constructor id"
-			return self.error_message()
+			return self.api_call.error_message("You need to specify a constructor id")
 
 		self.def_return_value = get(f"{self.base_url}/constructors/{self.constructor_id}/constructorStandings")
 		return self

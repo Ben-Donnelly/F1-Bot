@@ -2,9 +2,10 @@ from requests import get
 import json
 from re import match, I
 from datetime import datetime
+from drivers import F1drivers
 
 
-class Resulst:
+class Results:
 	current_year = datetime.today().year
 
 	def __init__(self, year=current_year, race_number=None, driver=None):
@@ -19,7 +20,8 @@ class Resulst:
 			if not circuit:
 				raise Exception('You need to specify a circuit')
 
-			driver_id_dict = self.map_names_to_id()
+			driver_call = F1drivers.Drivers()
+			driver_id_dict = driver_call.map_names_to_id()
 
 			d1_flag = False
 			d2_flag = False
@@ -59,15 +61,6 @@ class Resulst:
 			driver2_data = driver2_data['MRData']['RaceTable']['Races'][0]['Results'][0]
 			return {compare_driver1: driver1_data, compare_driver2: driver2_data}
 
-		# This is cool
-		# Most recent race result: replace year and race_number with current and last
-		# if not self.race_number:
-		# 	self.race_number = 'last'
-		# if not self.year:
-		# 	self.year = 'current'
-		# data = get(f"{self.base_url}/{self.year}/{self.race_number}/results.json")
-		# self.validate_parameters()
-		print(f"{self.base_url}/{self.year}/{self.race_number}/results.json")
 		# data = json.loads(data.text)
 		data = """{
 	"MRData": {
@@ -881,37 +874,3 @@ class Resulst:
 			print(i)
 			# print()
 		return self
-
-	def compare_2_drivers_from_a_race(self, driver1, driver2, circuit=None):
-		if not driver1 and driver2:
-			raise Exception('You need to specify 2 drivers to compare')
-
-		if not circuit:
-			raise Exception('You need to specify a circuit')
-
-		data = self.results(compare_driver1=driver1, compare_driver2=driver2, circuit=circuit, compare_flag=True)
-		d1, d2 = data.keys()
-
-		# Next: Here
-		# Note: This is broken both times are equal
-		# Don't blame me for the bad code here, I'm tired and I will fix it
-		d1_fastest_lap = data[d1]['FastestLap']['Time']['time']
-		d2_fastest_lap = data[d2]['FastestLap']['Time']['time']
-
-		d_fastest_time = (datetime.strptime(d1_fastest_lap, format='%M:%S.%f') - datetime.strptime(d2_fastest_lap, format)).total_seconds()
-
-		if d_fastest_time > 0:
-			data['driver_with_fastest_lap'] = d1
-			data['driver_with_fastest_lap_time'] = d1_fastest_lap
-			data['driver_with_2nd_fastest_lap'] = d2
-			data['driver_with_2nd_fastest_lap_time'] = d2_fastest_lap
-		else:
-			data['driver_with_fastest_lap'] = d2
-			data['driver_with_fastest_lap_time'] = d2_fastest_lap
-			data['driver_with_2nd_fastest_lap'] = d1
-			data['driver_with_2nd_fastest_lap_time'] = d1_fastest_lap
-
-		fl_string = f"{data['driver_with_fastest_lap']} had the fastest lap with a time of {data['driver_with_fastest_lap_time']}.\n" \
-					f"This was {abs(d_fastest_time)} faster than {data['driver_with_2nd_fastest_lap']} with a time of {data['driver_with_2nd_fastest_lap_time']}\n" \
-					f"(Note: these are just comparisons of these 2 drivers)"
-		print(fl_string)

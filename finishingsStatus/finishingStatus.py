@@ -1,5 +1,7 @@
 from requests import get
 from datetime import datetime
+import ApiCalls
+
 
 class FinishingStatus:
 	current_year = datetime.today().year
@@ -30,5 +32,7 @@ class FinishingStatus:
 			self.race_number = 'last'
 
 		self.def_return_value = get(f"{self.base_url}/{self.year}/{self.race_number}/status")
-		self.validate_parameters()
+
+		ApiCall = ApiCalls.Call()
+		ApiCall.validate_parameters()
 		return self
